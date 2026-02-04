@@ -5,8 +5,16 @@
 
 // 初期化: localStorageに保存されたURLがあれば使用
 (function initializeApiUrl() {
+    // 構成オブジェクトのチェック
+    if (typeof CONFIG === 'undefined') {
+        console.error('Critical Error: CONFIG is not defined. config.js must be loaded before api.js');
+        return;
+    }
+
     // デフォルトURLを保持（フォールバック用）
-    CONFIG.DEFAULT_GAS_URL = CONFIG.GAS_URL;
+    if (!CONFIG.DEFAULT_GAS_URL) {
+        CONFIG.DEFAULT_GAS_URL = CONFIG.GAS_URL;
+    }
 
     try {
         const savedUrl = localStorage.getItem('OSG_API_URL');
@@ -29,6 +37,15 @@ let cacheTimestamp = null;
  * @return {Promise<Array>} シフトデータの配列
  */
 async function fetchShiftData(forceRefresh = false) {
+    if (typeof CONFIG === 'undefined') {
+        throw new Error('Configuration Error: CONFIG is missing');
+    }
+
+    // デフォルトURLが未設定の場合の安全策
+    if (!CONFIG.DEFAULT_GAS_URL) {
+        CONFIG.DEFAULT_GAS_URL = CONFIG.GAS_URL;
+    }
+
     // キャッシュチェック (userSettingsも含めてキャッシュが必要だが、簡易的にデータがあればOKとする)
     // 構造変更: cachedData = { data: [], userSettings: {} }
     if (!forceRefresh && cachedData && cacheTimestamp) {
@@ -48,6 +65,11 @@ async function fetchShiftData(forceRefresh = false) {
 
         // URLにパラメータ追加 (userId)
         const buildFetchUrl = (baseUrl) => {
+            if (!baseUrl || typeof baseUrl !== 'string') {
+                console.warn('Invalid base URL:', baseUrl);
+                return CONFIG.DEFAULT_GAS_URL || '';
+            }
+
             let url = baseUrl;
             if (typeof Auth !== 'undefined') {
                 const user = Auth.getUser();
@@ -60,6 +82,7 @@ async function fetchShiftData(forceRefresh = false) {
         };
 
         let fetchUrl = buildFetchUrl(CONFIG.GAS_URL);
+
 
         let response;
         try {
