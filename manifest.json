@@ -2,7 +2,7 @@
   "name": "Operator Shift Guard",
   "short_name": "OSG",
   "start_url": "./html/login.html",
-  "display": "standalone",
+  "display": "browser",
   "background_color": "#1e1e23",
   "theme_color": "#1e1e23",
   "icons": [
@@ -18,3 +18,4 @@
     }
   ]
 }
+
