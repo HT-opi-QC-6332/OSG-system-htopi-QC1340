@@ -5,9 +5,12 @@
 
 // 初期化: localStorageに保存されたURLがあれば使用
 (function initializeApiUrl() {
+    // デフォルトURLを保持（フォールバック用）
+    CONFIG.DEFAULT_GAS_URL = CONFIG.GAS_URL;
+
     try {
         const savedUrl = localStorage.getItem('OSG_API_URL');
-        if (savedUrl && savedUrl !== 'YOUR_GAS_DEPLOYMENT_URL_HERE') {
+        if (savedUrl && savedUrl !== 'YOUR_GAS_DEPLOYMENT_URL_HERE' && savedUrl !== CONFIG.GAS_URL) {
             console.log('Loading saved API URL from localStorage');
             CONFIG.GAS_URL = savedUrl;
         }
@@ -44,20 +47,42 @@ async function fetchShiftData(forceRefresh = false) {
         const timeoutId = setTimeout(() => controller.abort(), CONFIG.REQUEST_TIMEOUT);
 
         // URLにパラメータ追加 (userId)
-        let fetchUrl = CONFIG.GAS_URL;
-        if (typeof Auth !== 'undefined') {
-            const user = Auth.getUser();
-            if (user && user.id) {
-                // GAS_URLが既にクエリパラメータを持っているかチェック
-                const separator = fetchUrl.includes('?') ? '&' : '?';
-                fetchUrl = `${fetchUrl}${separator}action=getData&userId=${encodeURIComponent(user.id)}`;
+        const buildFetchUrl = (baseUrl) => {
+            let url = baseUrl;
+            if (typeof Auth !== 'undefined') {
+                const user = Auth.getUser();
+                if (user && user.id) {
+                    const separator = url.includes('?') ? '&' : '?';
+                    url = `${url}${separator}action=getData&userId=${encodeURIComponent(user.id)}`;
+                }
+            }
+            return url;
+        };
+
+        let fetchUrl = buildFetchUrl(CONFIG.GAS_URL);
+
+        let response;
+        try {
+            response = await fetch(fetchUrl, {
+                method: 'GET',
+                signal: controller.signal
+            });
+        } catch (initialError) {
+            // 最初のトライで失敗、かつ現在のURLがデフォルトと異なる場合はデフォルトでリトライ
+            if (CONFIG.GAS_URL !== CONFIG.DEFAULT_GAS_URL) {
+                console.warn('Fetch with stored URL failed, retrying with DEFAULT_GAS_URL:', initialError);
+                CONFIG.GAS_URL = CONFIG.DEFAULT_GAS_URL; // URLをリセット
+                localStorage.removeItem('OSG_API_URL'); // 不正なキャッシュを削除
+
+                fetchUrl = buildFetchUrl(CONFIG.GAS_URL);
+                response = await fetch(fetchUrl, {
+                    method: 'GET',
+                    signal: controller.signal
+                });
+            } else {
+                throw initialError; // デフォルトでもダメならエラー
             }
         }
-
-        const response = await fetch(fetchUrl, {
-            method: 'GET',
-            signal: controller.signal
-        });
 
         clearTimeout(timeoutId);
 
