@@ -1,0 +1,20 @@
+{
+  "name": "Operator Shift Guard",
+  "short_name": "OSG",
+  "start_url": "./html/login.html",
+  "display": "standalone",
+  "background_color": "#1e1e23",
+  "theme_color": "#1e1e23",
+  "icons": [
+    {
+      "src": "./assets/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

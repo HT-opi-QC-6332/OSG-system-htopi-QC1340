@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン - Operator Shift Guard (OSG)</title>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="../manifest.json">
+    <style>
+        /* Login Page Specific Styles */
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            /* Prevent scrolling */
+        }
+
+        .login-page {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            box-sizing: border-box;
+            /* Ensure padding doesn't affect width */
+        }
+
+        .login-card {
+            background: rgba(30, 41, 59, 0.95);
+            /* Darker background with slight transparency */
+            padding: 2.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .login-header {
+            margin-bottom: 2rem;
+        }
+
+        .login-logo {
+            width: 80px;
+            height: auto;
+            margin-bottom: 1rem;
+            background-color: transparent;
+            /* Explicitly set to match card */
+            border-radius: 4px;
+            /* Optional adjustment */
+        }
+
+        .login-title {
+            font-size: 1.5rem;
+            color: #ffffff;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-subtitle {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+        }
+
+        .login-form .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .login-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #e2e8f0;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .login-form .input-wrapper {
+            position: relative;
+        }
+
+        .login-form .input-wrapper i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+        }
+
+        .login-form input {
+            width: 100%;
+            padding: 10px 10px 10px 36px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+
+        .login-form input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #1e40af;
+            /* Darker blue */
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .login-btn:hover {
+            background-color: #fbbf24;
+            /* Yellow */
+            color: #1e293b;
+            /* Dark text for contrast on yellow */
+        }
+
+        .login-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        /* Password Toggle Button for Login Page */
+        .login-form .password-input-wrapper {
+            position: relative;
+        }
+
+        .login-form .password-input-wrapper input {
+            padding: 10px 50px 10px 36px !important;
+            /* Override default, space for both icons */
+        }
+
+        .login-form .password-input-wrapper .login-toggle-password {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 6px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+            z-index: 10;
+        }
+
+        .login-form .password-input-wrapper .login-toggle-password:hover {
+            color: #60a5fa;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-page">
+        <div class="login-card">
+            <div class="login-header">
+                <img src="../assets/logo.png" alt="OSG Logo" class="login-logo">
+                <h1 class="login-title">作業者交替管理システム</h1>
+                <p class="login-subtitle">Operator Shift Guard System</p>
+            </div>
+
+            <form class="login-form" id="loginForm">
+                <div class="form-group">
+                    <label for="userId">ユーザーID (メールアドレス)</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-envelope"></i>
+                        <input type="email" id="userId" placeholder="example@gmail.com" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">パスワード</label>
+                    <div class="input-wrapper password-input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="password" placeholder="パスワードを入力" required>
+                        <button type="button" class="toggle-password-btn login-toggle-password" data-target="password"
+                            title="パスワードを表示">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="login-btn" id="loginBtn">ログイン</button>
+                <div class="error-message" id="loginError">
+                    <i class="fa-solid fa-circle-exclamation"></i> <span>IDまたはパスワードが間違っています</span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        // Check Login Status (skip if already logged in)
+        if (Auth.isLoggedIn()) {
+            window.location.href = 'osg-main.html';
+        }
+
+        // Login Form Handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userId = document.getElementById('userId').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('loginError'); // Corrected ID to 'loginError'
+            const submitBtn = document.querySelector('.login-btn');
+
+            // Reset UI
+            errorMsg.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'ログイン中...';
+
+            try {
+                // Call Auth Module
+                const result = await Auth.login(userId, password);
+                if (result.success) {
+                    window.location.href = 'osg-main.html';
+                } else {
+                    errorMsg.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <span>${result.message}</span>`; // Keep icon
+                    errorMsg.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'ログイン';
+                }
+            } catch (error) {
+                console.error(error); // Keep console.error
+                errorMsg.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> <span>エラーが発生しました</span>'; // Keep icon
+                errorMsg.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'ログイン';
+            }
+        });
+
+        // Toggle Password Visibility
+        const toggleBtn = document.querySelector('.login-toggle-password');
+        if (toggleBtn) { // Added check for toggleBtn existence
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = toggleBtn.querySelector('i');
+
+            toggleBtn.addEventListener('click', () => {
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    toggleIcon.classList.remove('fa-eye');
+                    toggleIcon.classList.add('fa-eye-slash');
+                    toggleBtn.title = 'パスワードを隠す';
+                } else {
+                    passwordInput.type = 'password';
+                    toggleIcon.classList.remove('fa-eye-slash');
+                    toggleIcon.classList.add('fa-eye');
+                    toggleBtn.title = 'パスワードを表示';
+                }
+            });
+        }
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
+</body>
+
+</html>

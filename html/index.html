@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Shift Guard (OSG)</title>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <!-- Left: Large Logo + Link -->
+            <div class="logo-section">
+                <img src="../assets/logo.png" alt="OSG Logo" class="header-logo">
+                <a href="https://docs.google.com/spreadsheets/d/1dGJ32mGi4p312adayz4uACKdSxGlv5IWyTy6GhF0MXI/edit?gid=0#gid=0"
+                    target="_blank" class="sheet-link">
+                    <i class="fa-solid fa-table"></i> 一覧表へ移動
+                </a>
+            </div>
+
+            <!-- Right: Title, Search, Filters -->
+            <div class="header-right">
+                <!-- Row 1: Title -->
+                <div class="header-title">
+                    <h1>作業者交替管理システム<span class="subtitle-inline">（Operator Shift Guard）</span></h1>
+                </div>
+
+                <!-- Row 2: Search -->
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="検索...">
+                    <button id="clearSearch" class="clear-search-btn" title="クリア">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Row 3: Filters -->
+                <div class="header-filters">
+                    <button class="filter-chip active" id="filterAll">
+                        <i class="fa-solid fa-list"></i>
+                        <span class="desktop-text">すべて</span>
+                    </button>
+
+                    <!-- 処理状況 -->
+                    <div class="dropdown-wrapper">
+                        <button class="filter-chip" id="filterStatus">
+                            <i class="fa-solid fa-tasks"></i>
+                            <span class="desktop-text">処理状況</span> <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="statusDropdown">
+                            <button class="dropdown-item" data-status="all">すべて</button>
+                            <button class="dropdown-item" data-status="unconfirmed">未確認</button>
+                            <button class="dropdown-item" data-status="completed">完了</button>
+                            <button class="dropdown-item" data-status="ng">NG</button>
+                        </div>
+                    </div>
+
+                    <!-- 日付ソート -->
+                    <div class="dropdown-wrapper">
+                        <button class="filter-chip" id="filterDate">
+                            <i class="fa-solid fa-calendar"></i>
+                            <span class="desktop-text">日付</span> <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="dateDropdown">
+                            <button class="dropdown-item" data-date="all">すべて</button>
+                            <button class="dropdown-item" data-date="today">本日</button>
+                            <button class="dropdown-item" data-date="yesterday">昨日</button>
+                        </div>
+                    </div>
+
+                    <!-- 職場別 -->
+                    <div class="dropdown-wrapper">
+                        <button class="filter-chip" id="filterWorkplace">
+                            <i class="fa-solid fa-building"></i>
+                            <span class="desktop-text">職場別</span> <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="workplaceDropdown">
+                            <button class="dropdown-item" data-workplace="all">すべて</button>
+                            <button class="dropdown-item" data-workplace="press">プレス</button>
+                            <button class="dropdown-item" data-workplace="parts">部品組立</button>
+                            <button class="dropdown-item" data-workplace="cab">キャブ組立</button>
+                        </div>
+                    </div>
+
+                    <!-- 完成工程 -->
+                    <div class="dropdown-wrapper">
+                        <button class="filter-chip" id="filterCompletionProcess">
+                            <i class="fa-solid fa-check-circle"></i>
+                            <span class="desktop-text">完成工程</span> <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="completionProcessDropdown">
+                            <button class="dropdown-item" data-completion="all">すべて</button>
+                            <button class="dropdown-item" data-completion="has">有（◎）</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="shift-list" id="shiftList">
+            <!-- Cards will be injected here by JS -->
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/mockData.js"></script>
+    <script src="../js/app.js"></script>
+</body>
+
+</html>

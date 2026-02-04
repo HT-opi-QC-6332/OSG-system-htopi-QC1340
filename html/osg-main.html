@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operator Shift Guard (OSG)</title>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="../manifest.json">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <!-- モバイル版: ロゴとタイトルを横並び + ユーザーメニュー -->
+            <div class="mobile-header-row">
+                <!-- ロゴ -->
+                <img src="../assets/logo.png" alt="OSG Logo" class="header-logo mobile-logo">
+                <!-- タイトル（2段構成） -->
+                <div class="mobile-title-container">
+                    <h1 class="mobile-title">作業者交替管理システム</h1>
+                    <span class="mobile-subtitle">（Operator Shift Guard）</span>
+                </div>
+                <!-- ユーザーメニュー（歯車マークのみ） -->
+                <div class="mobile-user-menu">
+                    <div class="mobile-menu-btn" id="mobileMenuBtn">
+                        <i class="fa-solid fa-user-gear"></i>
+                    </div>
+                    <div class="mobile-dropdown" id="mobileDropdown">
+                        <!-- ユーザー情報（選択不可） -->
+                        <div class="dropdown-info">
+                            <div class="dropdown-info-row">
+                                <i class="fa-solid fa-user"></i>
+                                <span class="info-label">ユーザー名：</span>
+                                <span class="info-value" id="mobileDropdownUserName">ユーザー名</span>
+                            </div>
+                            <div class="dropdown-info-row">
+                                <i class="fa-solid fa-shield"></i>
+                                <span class="info-label">ユーザーランク：</span>
+                                <span class="info-value rank" id="mobileDropdownUserRank">一般</span>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+
+                        <!-- 自動更新設定 (Moved) -->
+                        <div class="dropdown-setting-row">
+                            <i class="fa-solid fa-clock"></i>
+                            <span class="setting-label">自動更新：</span>
+                            <div class="auto-update-setting">
+                                <select id="mobileAutoUpdateInterval" class="auto-update-select">
+                                    <option value="1">1分</option>
+                                    <option value="5" selected>5分</option>
+                                    <option value="10">10分</option>
+                                    <option value="15">15分</option>
+                                    <option value="30">30分</option>
+                                    <option value="45">45分</option>
+                                    <option value="60">60分</option>
+                                </select>
+                                <button id="mobileSaveAutoUpdateBtn" class="save-setting-btn" title="設定を保存"><i
+                                        class="fa-solid fa-floppy-disk"></i></button>
+                            </div>
+                        </div>
+                        <!-- アクションボタン -->
+                        <button id="mobileMarkAllReadBtn"><i class="fa-solid fa-check-double"></i> 全て既読にする</button>
+                        <button id="mobileChangePasswordBtn"><i class="fa-solid fa-key"></i> パスワード変更</button>
+                        <button id="mobileLogoutBtn" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i>
+                            ログアウト</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PC版: Left: Large Logo + Link -->
+            <div class="logo-section desktop-only">
+                <img src="../assets/logo.png" alt="OSG Logo" class="header-logo">
+                <a href="https://docs.google.com/spreadsheets/d/1dGJ32mGi4p312adayz4uACKdSxGlv5IWyTy6GhF0MXI/edit?gid=0#gid=0"
+                    target="_blank" class="sheet-link">
+                    <i class="fa-solid fa-table"></i> 一覧表へ移動
+                </a>
+            </div>
+
+            <!-- Right: Title, Search, Filters -->
+            <div class="header-right">
+                <!-- Row 1: Title (PC版のみ) -->
+                <div class="header-title desktop-only">
+                    <h1>作業者交替管理システム<span class="subtitle-inline">（Operator Shift Guard）</span></h1>
+
+                    <!-- User Controls -->
+                    <div class="user-controls" id="userControls" style="display:none;">
+                        <span class="user-label">ユーザー名：</span><span class="user-name-value"
+                            id="displayUserName">ユーザー名</span>
+                        <div class="user-menu-btn" id="userMenuBtn">
+                            <i class="fa-solid fa-user-gear"></i>
+                        </div>
+                        <div class="user-dropdown" id="userDropdown">
+                            <!-- ユーザー情報（選択不可） -->
+                            <div class="dropdown-info">
+                                <div class="dropdown-info-row">
+                                    <i class="fa-solid fa-user"></i>
+                                    <span class="info-label">ユーザー名：</span>
+                                    <span class="info-value" id="dropdownUserName">ユーザー名</span>
+                                </div>
+                                <div class="dropdown-info-row">
+                                    <i class="fa-solid fa-shield"></i>
+                                    <span class="info-label">ユーザーランク：</span>
+                                    <span class="info-value rank" id="dropdownUserRank">一般</span>
+                                </div>
+                            </div>
+                            <div class="dropdown-divider"></div>
+
+                            <!-- 自動更新設定 (Moved) -->
+                            <div class="dropdown-setting-row">
+                                <i class="fa-solid fa-clock"></i>
+                                <span class="setting-label">自動更新：</span>
+                                <div class="auto-update-setting">
+                                    <select id="autoUpdateInterval" class="auto-update-select">
+                                        <option value="1">1分</option>
+                                        <option value="5" selected>5分</option>
+                                        <option value="10">10分</option>
+                                        <option value="15">15分</option>
+                                        <option value="30">30分</option>
+                                        <option value="45">45分</option>
+                                        <option value="60">60分</option>
+                                    </select>
+                                    <button id="saveAutoUpdateBtn" class="save-setting-btn" title="設定を保存"><i
+                                            class="fa-solid fa-floppy-disk"></i></button>
+                                </div>
+                            </div>
+                            <!-- アクションボタン -->
+                            <button id="markAllReadBtn"><i class="fa-solid fa-check-double"></i> 全て既読にする</button>
+                            <button id="changePasswordBtn"><i class="fa-solid fa-key"></i> パスワード変更</button>
+                            <button id="logoutBtn" class="logout-btn"><i class="fa-solid fa-right-from-bracket"></i>
+                                ログアウト</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Search -->
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="検索...">
+                    <button id="clearSearch" class="clear-search-btn" title="クリア">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Row 3: Filters -->
+                <!-- モバイル用: フィルター展開ボタン + アクションボタン -->
+                <div class="mobile-controls-row">
+                    <button class="mobile-filter-toggle" id="mobileFilterToggle">
+                        <i class="fa-solid fa-filter"></i>
+                        <span>フィルター</span>
+                        <i class="fa-solid fa-chevron-down toggle-icon"></i>
+                    </button>
+                    <!-- モバイル用: アクションボタン（通知・更新） -->
+                    <div class="mobile-action-buttons">
+                        <button id="mobileNotificationBtn" class="action-btn notification-btn" title="新着通知設定">
+                            <i class="fa-solid fa-bell-slash"></i>
+                        </button>
+                        <button id="mobileRefreshBtn" class="action-btn refresh-btn" title="手動更新">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- フィルターコンテナ（モバイルでは折りたたみ） -->
+                <div class="header-filters" id="headerFilters">
+                    <button class="filter-chip active" id="filterAll">
+                        <i class="fa-solid fa-list"></i>
+                        <span class="desktop-text">すべて</span>
+                    </button>
+
+                    <!-- 処理状況 -->
+                    <div class="dropdown-wrapper">
+                        <button class="filter-chip" id="filterStatus">
+                            <i class="fa-solid fa-tasks"></i>
+                            <span class="desktop-text">処理状況</span> <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="statusDropdown">
+                            <button class="dropdown-item" data-status="all">すべて</button>
+                            <button class="dropdown-item" data-status="unconfirmed">未確認（全）</button>
+                            <button class="dropdown-item" data-status="mfg_unconfirmed">製造未確認</button>
+                            <button class="dropdown-item" data-status="qc_unconfirmed">品管未確認</button>
+                            <button class="dropdown-item" data-status="completed">完了</button>
+                            <button class="dropdown-item" data-status="ng">NG</button>
+                        </div>
+                    </div>
+
+                    <!-- 日付ソート -->
+                    <div class="dropdown-wrapper">
+                        <button class="filter-chip" id="filterDate">
+                            <i class="fa-solid fa-calendar"></i>
+                            <span class="desktop-text">日付</span> <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="dateDropdown">
+                            <button class="dropdown-item" data-date="all">すべて</button>
+                            <button class="dropdown-item" data-date="today">本日</button>
+                            <button class="dropdown-item" data-date="yesterday">昨日</button>
+                        </div>
+                    </div>
+
+                    <!-- 職場別 -->
+                    <div class="dropdown-wrapper">
+                        <button class="filter-chip" id="filterWorkplace">
+                            <i class="fa-solid fa-building"></i>
+                            <span class="desktop-text">職場別</span> <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="workplaceDropdown">
+                            <button class="dropdown-item" data-workplace="all">すべて</button>
+                            <button class="dropdown-item" data-workplace="press">プレス</button>
+                            <button class="dropdown-item" data-workplace="parts">部品組立</button>
+                            <button class="dropdown-item" data-workplace="cab">キャブ組立</button>
+                        </div>
+                    </div>
+
+                    <!-- 完成工程 -->
+                    <div class="dropdown-wrapper">
+                        <button class="filter-chip" id="filterCompletionProcess">
+                            <i class="fa-solid fa-check-circle"></i>
+                            <span class="desktop-text">完成工程</span> <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="completionProcessDropdown">
+                            <button class="dropdown-item" data-completion="all">すべて</button>
+                            <button class="dropdown-item" data-completion="has">有（◎）</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 4: Active Filter Conditions -->
+                <div class="filter-condition-display" id="filterConditionDisplay" style="display: none;">
+                    <!-- Filter conditions will be inserted here by JS -->
+                </div>
+                <!-- Row 3: Filters End -->
+
+                <!-- PC版: Action Buttons（モバイルでは非表示） -->
+                <div class="action-buttons desktop-action-buttons">
+                    <!-- Notification Button -->
+                    <button id="notificationBtn" class="action-btn notification-btn" title="新着通知設定">
+                        <i class="fa-solid fa-bell-slash"></i>
+                    </button>
+                    <!-- Refresh Button -->
+                    <button id="refreshBtn" class="action-btn refresh-btn" title="手動更新">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="shift-list" id="shiftList">
+            <!-- Cards will be injected here by JS -->
+        </main>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="editModalTitle">編集: No. <span id="editModalId"></span></h2>
+                <button class="modal-close" id="editModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editShiftId" name="editShiftId">
+                    <input type="hidden" id="editSection" name="editSection">
+
+                    <!-- Manufacturing Fields -->
+                    <div id="mfgFields" style="display:none;">
+                        <div class="form-group">
+                            <label>教育担当者</label>
+                            <input type="text" name="educator" placeholder="教育担当者名">
+                        </div>
+                        <div class="form-group">
+                            <label>交替品確認者</label>
+                            <input type="text" name="confirmPerson" placeholder="確認者名">
+                        </div>
+                        <div class="form-group">
+                            <label>交替承認者</label>
+                            <input type="text" name="approver" placeholder="承認者名">
+                        </div>
+                    </div>
+
+                    <!-- QC Fields -->
+                    <div id="qcFields" style="display:none;">
+                        <div class="form-group">
+                            <label>標準書教育</label>
+                            <select name="standardEducation">
+                                <option value="-">-</option>
+                                <option value="OK">OK</option>
+                                <option value="NG">NG</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>抜取り検査</label>
+                            <select name="samplingInspection">
+                                <option value="-">-</option>
+                                <option value="OK">OK</option>
+                                <option value="NG">NG</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>検査結果</label>
+                            <input type="text" name="inspectionResult" placeholder="検査結果/コメント">
+                        </div>
+                        <div class="form-group">
+                            <label>担当者</label>
+                            <input type="text" name="inspector" placeholder="担当者名">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-cancel" id="editCancelBtn">キャンセル</button>
+                        <button type="submit" class="btn-save" id="editSaveBtn">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Change Modal -->
+    <div id="passwordModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>パスワード変更</h2>
+                <button class="modal-close" id="passwordModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="passwordForm">
+                    <div class="form-group">
+                        <label>現在のパスワード</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" name="oldPassword" id="oldPassword" required
+                                autocomplete="current-password">
+                            <button type="button" class="toggle-password-btn" data-target="oldPassword"
+                                title="パスワードを表示">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>新しいパスワード</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" name="newPassword" id="newPassword" required minlength="4"
+                                autocomplete="new-password">
+                            <button type="button" class="toggle-password-btn" data-target="newPassword"
+                                title="パスワードを表示">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>新しいパスワード（確認）</label>
+                        <div class="password-input-wrapper">
+                            <input type="password" name="confirmPassword" id="confirmPassword" required minlength="4"
+                                autocomplete="new-password">
+                            <button type="button" class="toggle-password-btn" data-target="confirmPassword"
+                                title="パスワードを表示">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-cancel" id="passwordCancelBtn">キャンセル</button>
+                        <button type="submit" class="btn-save" id="passwordSaveBtn">変更</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        // Check Login immediately
+        if (!Auth.isLoggedIn()) {
+            window.location.href = 'login.html';
+        }
+
+        // Setup User UI
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = Auth.getUser();
+            if (user) {
+                document.getElementById('userControls').style.display = 'flex';
+                document.getElementById('displayUserName').textContent = user.name;
+
+                // ドロップダウン内のユーザー情報を設定（PC版）
+                const dropdownUserName = document.getElementById('dropdownUserName');
+                const dropdownUserRank = document.getElementById('dropdownUserRank');
+
+                // ロールを日本語に変換
+                const roleMap = {
+                    'admin': '管理者',
+                    'manufacturing_editor': '製造編集者',
+                    'quality_editor': '品質編集者',
+                    'viewer': '閲覧者'
+                };
+                const roleText = roleMap[user.role] || user.role;
+
+                if (dropdownUserName) {
+                    dropdownUserName.textContent = user.name;
+                }
+                if (dropdownUserRank) {
+                    dropdownUserRank.textContent = roleText;
+                }
+
+                // モバイル版ドロップダウンのユーザー情報を設定
+                const mobileDropdownUserName = document.getElementById('mobileDropdownUserName');
+                const mobileDropdownUserRank = document.getElementById('mobileDropdownUserRank');
+                if (mobileDropdownUserName) {
+                    mobileDropdownUserName.textContent = user.name;
+                }
+                if (mobileDropdownUserRank) {
+                    mobileDropdownUserRank.textContent = roleText;
+                }
+
+                // Toggle Dropdown
+                const menuBtn = document.getElementById('userMenuBtn');
+                const dropdown = document.getElementById('userDropdown');
+
+                menuBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('show');
+                });
+
+                document.addEventListener('click', () => {
+                    dropdown.classList.remove('show');
+                    // モバイル用ドロップダウンも閉じる
+                    const mobileDropdown = document.getElementById('mobileDropdown');
+                    if (mobileDropdown) {
+                        mobileDropdown.classList.remove('show');
+                    }
+                });
+
+                // Logout
+                document.getElementById('logoutBtn').addEventListener('click', () => {
+                    Auth.logout();
+                });
+
+                // モバイル用メニューボタン
+                const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+                const mobileDropdown = document.getElementById('mobileDropdown');
+                if (mobileMenuBtn && mobileDropdown) {
+                    mobileMenuBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        mobileDropdown.classList.toggle('show');
+                    });
+                }
+
+                // モバイル用ログアウトボタン
+                const mobileLogoutBtn = document.getElementById('mobileLogoutBtn');
+                if (mobileLogoutBtn) {
+                    mobileLogoutBtn.addEventListener('click', () => {
+                        Auth.logout();
+                    });
+                }
+
+                // 「全て既読にする」ボタン（PC版）
+                const markAllReadBtn = document.getElementById('markAllReadBtn');
+                if (markAllReadBtn) {
+                    markAllReadBtn.addEventListener('click', () => {
+                        markAllAsRead();
+                        dropdown.classList.remove('show');
+                    });
+                }
+
+                // 「全て既読にする」ボタン（モバイル版）
+                const mobileMarkAllReadBtn = document.getElementById('mobileMarkAllReadBtn');
+                if (mobileMarkAllReadBtn) {
+                    mobileMarkAllReadBtn.addEventListener('click', () => {
+                        markAllAsRead();
+                        const mobileDropdown = document.getElementById('mobileDropdown');
+                        if (mobileDropdown) mobileDropdown.classList.remove('show');
+                    });
+                }
+
+                // Password Change Modal Logic
+                const passwordModal = document.getElementById('passwordModal');
+                const passwordForm = document.getElementById('passwordForm');
+                const passwordModalClose = document.getElementById('passwordModalClose');
+                const passwordCancelBtn = document.getElementById('passwordCancelBtn');
+
+                function openPasswordModal() {
+                    passwordForm.reset();
+
+                    // Reset all password fields to hidden state
+                    document.querySelectorAll('.password-input-wrapper input[type="text"]').forEach(input => {
+                        input.type = 'password';
+                    });
+
+                    // Reset all toggle buttons to default state (eye icon)
+                    document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+                        const icon = btn.querySelector('i');
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                        btn.title = 'パスワードを表示';
+                    });
+
+                    passwordModal.classList.add('show');
+                }
+
+                function closePasswordModal() {
+                    passwordModal.classList.remove('show');
+                }
+
+                // Open modal when clicking Change Password button (PC版)
+                document.getElementById('changePasswordBtn').addEventListener('click', () => {
+                    dropdown.classList.remove('show'); // Close user dropdown
+                    openPasswordModal();
+                });
+
+                // Open modal when clicking Change Password button (モバイル版)
+                const mobileChangePasswordBtn = document.getElementById('mobileChangePasswordBtn');
+                if (mobileChangePasswordBtn) {
+                    mobileChangePasswordBtn.addEventListener('click', () => {
+                        const mobileDropdown = document.getElementById('mobileDropdown');
+                        if (mobileDropdown) mobileDropdown.classList.remove('show');
+                        openPasswordModal();
+                    });
+                }
+
+                // Close modal events
+                passwordModalClose.addEventListener('click', closePasswordModal);
+                passwordCancelBtn.addEventListener('click', closePasswordModal);
+
+                // Close on outside click
+                window.addEventListener('click', (e) => {
+                    if (e.target === passwordModal) {
+                        closePasswordModal();
+                    }
+                });
+
+                // Password Form Submit
+                passwordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    const oldPassword = document.getElementById('oldPassword').value;
+                    const newPassword = document.getElementById('newPassword').value;
+                    const confirmPassword = document.getElementById('confirmPassword').value;
+
+                    // Validation
+                    if (newPassword !== confirmPassword) {
+                        alert('新しいパスワードが一致しません。');
+                        return;
+                    }
+
+                    if (newPassword.length < 4) {
+                        alert('新しいパスワードは4文字以上で設定してください。');
+                        return;
+                    }
+
+                    const saveBtn = document.getElementById('passwordSaveBtn');
+                    const originalText = saveBtn.textContent;
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = '変更中...';
+
+                    try {
+                        const result = await Auth.changePassword(oldPassword, newPassword);
+
+                        if (result.success) {
+                            alert('パスワードを変更しました。');
+                            closePasswordModal();
+                        } else {
+                            alert('エラー: ' + (result.message || 'パスワード変更に失敗しました。'));
+                        }
+                    } catch (error) {
+                        console.error('Password change error:', error);
+                        alert('通信エラーが発生しました。');
+                    } finally {
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = originalText;
+                    }
+                });
+
+                // Password Toggle Buttons
+                document.querySelectorAll('.toggle-password-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const targetId = this.getAttribute('data-target');
+                        const passwordInput = document.getElementById(targetId);
+                        const icon = this.querySelector('i');
+
+                        if (passwordInput.type === 'password') {
+                            passwordInput.type = 'text';
+                            icon.classList.remove('fa-eye');
+                            icon.classList.add('fa-eye-slash');
+                            this.title = 'パスワードを隠す';
+                        } else {
+                            passwordInput.type = 'password';
+                            icon.classList.remove('fa-eye-slash');
+                            icon.classList.add('fa-eye');
+                            this.title = 'パスワードを表示';
+                        }
+                    });
+                });
+
+                // モバイル用: フィルター展開ボタン
+                const mobileFilterToggle = document.getElementById('mobileFilterToggle');
+                const headerFilters = document.getElementById('headerFilters');
+                if (mobileFilterToggle && headerFilters) {
+                    mobileFilterToggle.addEventListener('click', () => {
+                        headerFilters.classList.toggle('expanded');
+                        mobileFilterToggle.classList.toggle('active');
+                    });
+                }
+            }
+        });
+    </script>
+    <script src="../js/app.js"></script>
+    <script>
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('../sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // New version available
+                                    if (confirm('新しいバージョンが利用可能です。更新しますか？')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+
+            // Reload when new SW activates
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+        }
+    </script>
+</body>
+
+</html>
