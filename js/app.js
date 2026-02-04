@@ -13,6 +13,7 @@ let autoUpdateTimer = null;
 const DEFAULT_AUTO_UPDATE_MINUTES = 5;
 let autoUpdateMinutes = parseInt(localStorage.getItem('OSG_AUTO_UPDATE_MINUTES')) || DEFAULT_AUTO_UPDATE_MINUTES; // 初期値読み込み
 let autoUpdateInterval = autoUpdateMinutes * 60 * 1000; // ミリ秒変換
+let notificationAudio = null; // グローバルAudioオブジェクト（再利用用）
 
 // NEWバッジ表示用のIDセット（localStorageから復元 - ブラウザを閉じても永続化）
 const savedNewItemIds = localStorage.getItem('newItemIds');
@@ -174,6 +175,167 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initial Layout Adjustment
     adjustLayout();
 
+    // --- Audio Unlock Logic ---
+    // ヘルパー：Audioオブジェクトの取得（シングルトン）
+    const getNotificationAudio = () => {
+        if (!notificationAudio) {
+            const isSubDir = window.location.pathname.includes('/html/');
+            const path = isSubDir ? '../assets/notification.mp3' : 'assets/notification.mp3';
+            notificationAudio = new Audio(path);
+        }
+        return notificationAudio;
+    };
+
+    // ブラウザの自動再生ポリシー対策：ユーザーの初回操作時に無音で再生してアンロックする
+    // ブラウザの自動再生ポリシー対策：ユーザーの初回操作時に無音で再生してアンロックする
+    const unlockAudio = () => {
+        const audio = getNotificationAudio();
+
+        // 音量は0だとブロックされる場合があるため、極小にする
+        audio.volume = 0.01;
+
+        // 再生状態をリセット
+        audio.load();
+
+        // 再生して即停止することで、「ユーザー操作による再生」の実績を作る
+        const playPromise = audio.play();
+
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                console.log('Audio playback unlocked');
+                audio.pause();
+                audio.currentTime = 0; // 巻き戻し
+                audio.volume = 0.5; // 音量を戻す
+            }).catch(e => {
+                console.log('Audio unlock failed (likely waiting for interaction):', e);
+            });
+        }
+    };
+
+    /**
+     * Show Welcome Modal for Audio Unlock
+     * ログイン情報を表示し、OKボタンで音声アンロックを行う
+     */
+    const showWelcomeModal = () => {
+        const user = Auth.getUser();
+        if (!user) return; // ログインしていない場合は出さない
+
+        // F5更新時も毎回出すため、ここでのセッションチェックは削除、または
+        // 起動時にこのフラグを消去する運用にする。
+        // ここでは念のためチェックせず、常に表示する形にするが、
+        // startAutoUpdateのガードのためにフラグ自体は必要。
+        // なので、「表示前にフラグを消す」処理を入れる。
+        sessionStorage.removeItem('osg_welcome_shown');
+
+        // 職場名の解決
+        const workplaceNameMap = {
+            'P': 'プレス',
+            'A': '部品組立',
+            'C': 'キャブ組立',
+            'all': '全般'
+        };
+        const wpName = workplaceNameMap[user.workplaceCode] || user.workplaceCode || '-';
+
+        const modalHtml = `
+            <div class="welcome-modal-overlay" id="welcomeModal">
+                <div class="welcome-modal-card">
+                    <div class="welcome-header">
+                        <i class="fa-solid fa-circle-check"></i> ログイン完了
+                    </div>
+                    <div class="welcome-info">
+                        <div class="welcome-info-row">
+                            <span class="welcome-info-label">ユーザー名</span>
+                            <span class="welcome-info-value">${user.name} 様</span>
+                        </div>
+                        <div class="welcome-info-row">
+                            <span class="welcome-info-label">ユーザークラス</span>
+                            <span class="welcome-info-value">${user.role}</span>
+                        </div>
+                        <div class="welcome-info-row">
+                            <span class="welcome-info-label">担当職場</span>
+                            <span class="welcome-info-value">${wpName}</span>
+                        </div>
+                    </div>
+                    <button class="welcome-ok-btn" id="welcomeOkBtn">
+                        確認
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const okBtn = document.getElementById('welcomeOkBtn');
+        const modal = document.getElementById('welcomeModal');
+
+        okBtn.addEventListener('click', () => {
+            // 音声アンロック実行
+            unlockAudio();
+
+            // モーダルを消す
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.remove();
+            }, 300);
+
+            // 表示済みフラグをセット
+            sessionStorage.setItem('osg_welcome_shown', 'true');
+
+            // 自動更新タイマーを開始（ここで初めてスタート）
+            startAutoUpdate();
+
+
+
+            // 保留していた初期通知があれば実行
+            if (window.pendingInitialNotifications && window.pendingInitialNotifications.length > 0) {
+                const items = window.pendingInitialNotifications;
+                const workplaceNameMap = {
+                    'P': 'プレス',
+                    'A': '部品組立',
+                    'C': 'キャブ組立'
+                };
+
+                const details = items.map(item => {
+                    const code = item.distributionCode;
+                    const name = workplaceNameMap[code] || code || '-';
+                    // newWorkerプロパティが存在するか確認、なければ空文字
+                    return `【${name}】No.${item.id}、${item.newWorker || ''}`;
+                }).join('\n');
+
+                // トースト通知
+                showToast(
+                    '新しい作業者交替が発生しています',
+                    `${items.length}件の新しい作業者交替を検知しました。\n${details}`,
+                    'info'
+                );
+
+                // デスクトップ通知
+                if (Notification.permission === 'granted') {
+                    new Notification('新しい作業者交替が発生しています', {
+                        body: `${items.length}件の新しい作業者交替を検知しました。\n${details}`,
+                        tag: 'osg-initial'
+                    });
+                }
+
+                // 通知音再生（アンロック直後なので鳴るはず）
+                // 少しだけ遅延させてアンロックの確実性を高める
+                setTimeout(() => {
+                    playNotificationSound();
+                }, 200);
+
+                // クリア
+                window.pendingInitialNotifications = null;
+            }
+        });
+    };
+
+    // 初期化時にウェルカムモーダルを表示
+    setTimeout(showWelcomeModal, 500);
+
+    // 自動的なリスナーは削除（モーダルOKに一本化）
+    // ---------------------------
+    // ---------------------------
+
     // Search Filter Listener with Debounce (300ms)
     searchInput.addEventListener('input', () => {
         // ×ボタンの表示/非表示切り替え
@@ -303,7 +465,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         dateDropdown.classList.remove('show');
         workplaceDropdown.classList.remove('show');
         completionProcessDropdown.classList.remove('show');
-        completionProcessDropdown.classList.remove('show');
+
     });
 
     // --- Notification Button ---
@@ -397,8 +559,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 
-    // Start Auto Update
-    startAutoUpdate();
+    // Start Auto Update is deferred until welcome modal confirmation
+    // startAutoUpdate();
 
     // モバイル用ヘッダー高さ調整 (ResizeObserver)
     const header = document.querySelector('.app-header');
@@ -477,6 +639,9 @@ async function processDataUpdate(responseIsObject, isAutoUpdate = false) {
 
         // 通知処理（NEWバッジ情報更新）
         handleNotifications(newItems);
+
+        // 通知音を再生 (NEWバッジが付く場合のみ)
+        playNotificationSound();
 
         // トースト通知
         if (isAutoUpdate) {
@@ -1100,33 +1265,13 @@ function renderPaginationFooter(container, data, totalPages) {
 /**
  * ローディング表示
  */
-function showLoading() {
-    const shiftList = document.getElementById('shiftList');
-    shiftList.innerHTML = `
-        <div style="text-align:center; padding:40px;">
-            <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem; color:var(--accent-blue);"></i>
-            <p style="margin-top:15px; color:var(--text-secondary);">データを読み込み中...</p>
-        </div>
-    `;
-}
+
 
 /**
  * エラー表示
  * @param {string} message - エラーメッセージ
  */
-function showError(message) {
-    const shiftList = document.getElementById('shiftList');
-    shiftList.innerHTML = `
-        <div style="text-align:center; padding:40px;">
-            <i class="fa-solid fa-circle-exclamation" style="font-size:2rem; color:#f87171;"></i>
-            <p style="margin-top:15px; color:var(--text-primary); font-weight:500;">データの読み込みに失敗しました</p>
-            <p style="margin-top:10px; color:var(--text-secondary); font-size:0.9rem;">${message}</p>
-            <p style="margin-top:10px; color:var(--text-secondary); font-size:0.85rem;">
-                config.jsのGAS_URLが正しく設定されているか確認してください。
-            </p>
-        </div>
-    `;
-}
+
 
 /**
  * 日時フォーマット関数
@@ -1153,6 +1298,12 @@ function formatDateTime(dateStr) {
 // --- Auto Update & Notification Logic ---
 
 function startAutoUpdate() {
+    // ウェルカムモーダル（通知音許可）が完了するまでは自動更新をスタートしない
+    if (!sessionStorage.getItem('osg_welcome_shown')) {
+        console.log('Auto-update paused: waiting for welcome modal confirmation.');
+        return;
+    }
+
     if (autoUpdateTimer) clearTimeout(autoUpdateTimer);
 
     // 設定値 + 0~60秒のランダムゆらぎ
@@ -1357,6 +1508,82 @@ function removeToast(toast) {
 }
 
 /**
+ * Show Loading State
+ */
+function showLoading() {
+    const shiftList = document.getElementById('shiftList');
+    if (shiftList) {
+        shiftList.innerHTML = `
+            <div class="loading-container">
+                <i class="fa-solid fa-spinner fa-spin fa-3x" style="color:var(--accent-blue); margin-bottom: 20px;"></i>
+                <p>データを読み込んでいます...</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Show Error State
+ * @param {string} message 
+ */
+function showError(message) {
+    console.error(message);
+    const shiftList = document.getElementById('shiftList');
+    if (shiftList) {
+        shiftList.innerHTML = `
+            <div class="error-container">
+                <i class="fa-solid fa-triangle-exclamation fa-3x" style="color:#f87171; margin-bottom: 20px;"></i>
+                <p>エラーが発生しました</p>
+                <p style="color:var(--text-secondary); font-size: 0.9rem; margin-top:10px;">${message}</p>
+                <button onclick="location.reload()" style="margin-top:20px; padding:8px 16px; background:var(--accent-blue); border:none; border-radius:4px; color:white; cursor:pointer;">
+                    <i class="fa-solid fa-rotate-right"></i> 再読み込み
+                </button>
+            </div>
+        `;
+    }
+    showToast('エラー', 'データの読み込みに失敗しました', 'error');
+}
+
+/**
+ * Play Notification Sound
+ * NEWバッジが付く更新時に音を鳴らす
+ */
+function playNotificationSound() {
+    try {
+        // グローバルオブジェクトを使用（または新規作成）
+        // unlockAudioですでに作られていれば、それが使われる（アンロック済み）
+        let audio = notificationAudio;
+        if (!audio) {
+            // unlockがまだ走っていない場合のフォールバック
+            const isSubDir = window.location.pathname.includes('/html/');
+            const path = isSubDir ? '../assets/notification.mp3' : 'assets/notification.mp3';
+            audio = new Audio(path);
+            notificationAudio = audio; // グローバルに保存
+        }
+
+        audio.volume = 0.5; // 音量
+        audio.currentTime = 0; // 最初から再生
+
+        // 再生を試みる
+        const playPromise = audio.play();
+
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                // 自動再生ポリシーなどでブロックされた場合のエラーハンドリング
+                console.warn('Notification sound play failed:', error);
+
+                if (error.name === 'NotAllowedError') {
+                    // ユーザーに操作を促すトーストを表示
+                    showToast('通知音エラー', '画面をクリックして通知音を有効にしてください', 'info');
+                }
+            });
+        }
+    } catch (e) {
+        console.error('Audio setup error:', e);
+    }
+}
+
+/**
  * 起動時の新規データチェック（記憶Noとの比較）
  * @param {Array} allData - 全データ
  */
@@ -1388,34 +1615,9 @@ function checkInitialNotifications(allData) {
         });
 
         if (relevantItems.length > 0) {
-            // 職場コードを日本語名に変換するマップ
-            const workplaceNameMap = {
-                'P': 'プレス',
-                'A': '部品組立',
-                'C': 'キャブ組立'
-            };
-
-            // 詳細メッセージの作成
-            const details = relevantItems.map(item => {
-                const code = item.distributionCode;
-                const name = workplaceNameMap[code] || code || '-';
-                return `【${name}】No.${item.id}、${item.newWorker}`;
-            }).join('\n');
-
-            // トースト通知（1回のみ）
-            showToast(
-                '新しい作業者交替が発生しています',
-                `${relevantItems.length}件の新しい作業者交替を検知しました。\n${details}`,
-                'info'
-            );
-
-            // デスクトップ通知（許可されている場合、1回のみ）
-            if (Notification.permission === 'granted') {
-                new Notification('新しい作業者交替が発生しています', {
-                    body: `${relevantItems.length}件の新しい作業者交替を検知しました。\n${details}`,
-                    tag: 'osg-initial'
-                });
-            }
+            // 通知を保留し、ウェルカムモーダルのOKボタン押下時に実行する
+            window.pendingInitialNotifications = relevantItems;
+            console.log('Initial notifications deferred until user interaction.');
         }
 
         // 新規データのIDリストを記録（NEWバッジ表示用）フィルタリング済みのデータのみ

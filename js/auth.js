@@ -84,10 +84,7 @@ const Auth = {
         }
     },
 
-    /**
-     * @param {Object} user 
-     * @param {string} token 
-     */
+
     /**
      * Change Password function
      */

@@ -1732,3 +1732,108 @@ body {
     /* Pink */
     border: 1px solid rgba(233, 30, 99, 0.3);
 }
+
+/* ===========================================
+   Welcome Modal (Audio Unlock)
+   フッター上部にシステムウィンドウ風に表示
+   =========================================== */
+.welcome-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 9999;
+    /* 最前面 */
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    /* 下寄せ */
+    padding-bottom: 80px;
+    /* フッターの上あたり */
+    opacity: 0;
+    animation: fadeIn 0.3s forwards;
+}
+
+.welcome-modal-card {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 1px solid var(--accent-blue);
+    border-radius: 12px;
+    padding: 24px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    color: var(--text-primary);
+    transform: translateY(20px);
+    animation: slideUp 0.3s forwards;
+}
+
+.welcome-header {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--accent-blue);
+}
+
+.welcome-info {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.welcome-info-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 6px 0;
+}
+
+.welcome-info-label {
+    color: var(--text-secondary);
+}
+
+.welcome-info-value {
+    font-weight: bold;
+}
+
+.welcome-ok-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent-blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.welcome-ok-btn:active {
+    transform: scale(0.98);
+}
+
+.welcome-ok-btn:hover {
+    background: #4f46e5;
+    /* Slightly lighter blue */
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    to {
+        transform: translateY(0);
+    }
+}

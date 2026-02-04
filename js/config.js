@@ -11,5 +11,5 @@ const CONFIG = {
 
     // その他の設定
     CACHE_DURATION: 5 * 60 * 1000, // キャッシュ有効期間: 5分
-    REQUEST_TIMEOUT: 30000,        // リクエストタイムアウト: 30秒
+    REQUEST_TIMEOUT: 60000,        // リクエストタイムアウト: 60秒
 };
