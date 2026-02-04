@@ -1,4 +1,4 @@
-const CACHE_NAME = 'osg-app-v1';
+const CACHE_NAME = 'osg-app-v2';
 const ASSETS_TO_CACHE = [
     './html/login.html',
     './html/osg-main.html',
