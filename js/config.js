@@ -12,4 +12,22 @@ const CONFIG = {
     // その他の設定
     CACHE_DURATION: 5 * 60 * 1000, // キャッシュ有効期間: 5分
     REQUEST_TIMEOUT: 60000,        // リクエストタイムアウト: 60秒
+
+    // 共通変換テーブル
+    WORKPLACE_NAME_MAP: {
+        'P': 'プレス',
+        'A': '部品組立',
+        'C': 'キャブ組立',
+        'H': '補給',
+        'AC': '組立全般',
+        'PH': 'プレス/補給',
+        'all': '全般'
+    },
+
+    ROLE_NAME_MAP: {
+        'admin': '管理者',
+        'manufacturing_editor': '製造編集者',
+        'quality_editor': '品質編集者',
+        'viewer': '閲覧者'
+    }
 };

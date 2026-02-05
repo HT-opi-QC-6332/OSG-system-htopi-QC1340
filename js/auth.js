@@ -136,33 +136,6 @@ const Auth = {
         window.location.href = 'login.html';
     },
 
-    /**
-     * Mock API for initial development (to be replaced with GAS call)
-     */
-    async mockLoginApi(userId, password) {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                // Temporary simplified mock logic
-                if (password === 'admin') {
-                    resolve({
-                        success: true,
-                        token: 'mock_token_' + Date.now(),
-                        user: {
-                            id: userId,
-                            name: '管理者 太郎',
-                            role: '管理者', // 管理者, 製造課, 品管課, 閲覧者
-                            workplaceCode: 'all' // P, A, C, all, or empty
-                        }
-                    });
-                } else {
-                    resolve({
-                        success: false,
-                        message: 'IDまたはパスワードが間違っています'
-                    });
-                }
-            }, 800);
-        });
-    },
 
     /**
      * Require Login (Redirects if not logged in)

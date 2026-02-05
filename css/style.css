@@ -1593,6 +1593,10 @@ body {
 }
 
 /* --- Auto Update Settings (New Row) --- */
+.dropdown-info-row.countdown-row {
+    justify-content: flex-end;
+}
+
 .dropdown-setting-row {
     padding: 10px;
     color: var(--text-primary);
@@ -1753,6 +1757,7 @@ body {
     padding-bottom: 80px;
     /* フッターの上あたり */
     opacity: 0;
+    transition: opacity 0.3s ease;
     animation: fadeIn 0.3s forwards;
 }
 
@@ -1767,6 +1772,7 @@ body {
     color: var(--text-primary);
     transform: translateY(20px);
     animation: slideUp 0.3s forwards;
+    text-align: left;
 }
 
 .welcome-header {
@@ -1788,8 +1794,8 @@ body {
 .welcome-info-row {
     display: flex;
     justify-content: space-between;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 6px 0;
+    padding: 4px 0;
+    margin-bottom: 4px;
 }
 
 .welcome-info-label {
@@ -1797,6 +1803,18 @@ body {
 }
 
 .welcome-info-value {
+    font-weight: bold;
+}
+
+.welcome-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 12px 0;
+}
+
+.welcome-warning-text {
+    color: #ff4d4d;
+    /* Bright red for visibility on dark background */
     font-weight: bold;
 }
 

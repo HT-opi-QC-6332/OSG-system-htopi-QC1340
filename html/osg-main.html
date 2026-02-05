@@ -50,8 +50,13 @@
                             </div>
                             <div class="dropdown-info-row">
                                 <i class="fa-solid fa-shield"></i>
-                                <span class="info-label">ユーザーランク：</span>
+                                <span class="info-label">ユーザークラス：</span>
                                 <span class="info-value rank" id="mobileDropdownUserRank">一般</span>
+                            </div>
+                            <div class="dropdown-info-row">
+                                <i class="fa-solid fa-building"></i>
+                                <span class="info-label">担当職場：</span>
+                                <span class="info-value" id="mobileDropdownUserWorkplace">-</span>
                             </div>
                         </div>
                         <div class="dropdown-divider"></div>
@@ -72,6 +77,23 @@
                                 </select>
                                 <button id="mobileSaveAutoUpdateBtn" class="save-setting-btn" title="設定を保存"><i
                                         class="fa-solid fa-floppy-disk"></i></button>
+                            </div>
+                        </div>
+                        <!-- 自動更新カウントダウン -->
+                        <div class="dropdown-info-row countdown-row">
+                            <span class="info-label" style="opacity: 0.7;">自動更新まで：</span>
+                            <span class="info-value" id="mobileAutoUpdateCountdown" style="opacity: 0.7;">--:--</span>
+                        </div>
+
+                        <!-- 通知音設定 -->
+                        <div class="dropdown-setting-row">
+                            <i class="fa-solid fa-volume-high"></i>
+                            <span class="setting-label">通知音設定：</span>
+                            <div class="sound-toggle-group">
+                                <label class="radio-label"><input type="radio" name="mobileSound" value="on" checked>
+                                    ON</label>
+                                <label class="radio-label"><input type="radio" name="mobileSound" value="off">
+                                    OFF</label>
                             </div>
                         </div>
                         <!-- アクションボタン -->
@@ -115,8 +137,13 @@
                                 </div>
                                 <div class="dropdown-info-row">
                                     <i class="fa-solid fa-shield"></i>
-                                    <span class="info-label">ユーザーランク：</span>
+                                    <span class="info-label">ユーザークラス：</span>
                                     <span class="info-value rank" id="dropdownUserRank">一般</span>
+                                </div>
+                                <div class="dropdown-info-row">
+                                    <i class="fa-solid fa-building"></i>
+                                    <span class="info-label">担当職場：</span>
+                                    <span class="info-value" id="dropdownUserWorkplace">-</span>
                                 </div>
                             </div>
                             <div class="dropdown-divider"></div>
@@ -137,6 +164,22 @@
                                     </select>
                                     <button id="saveAutoUpdateBtn" class="save-setting-btn" title="設定を保存"><i
                                             class="fa-solid fa-floppy-disk"></i></button>
+                                </div>
+                            </div>
+                            <!-- 自動更新カウントダウン -->
+                            <div class="dropdown-info-row countdown-row">
+                                <span class="info-label" style="opacity: 0.7;">自動更新まで：</span>
+                                <span class="info-value" id="autoUpdateCountdown" style="opacity: 0.7;">--:--</span>
+                            </div>
+
+                            <!-- 通知音設定 -->
+                            <div class="dropdown-setting-row">
+                                <i class="fa-solid fa-volume-high"></i>
+                                <span class="setting-label">通知音設定：</span>
+                                <div class="sound-toggle-group">
+                                    <label class="radio-label"><input type="radio" name="sound" value="on" checked>
+                                        ON</label>
+                                    <label class="radio-label"><input type="radio" name="sound" value="off"> OFF</label>
                                 </div>
                             </div>
                             <!-- アクションボタン -->
@@ -223,6 +266,9 @@
                             <button class="dropdown-item" data-workplace="press">プレス</button>
                             <button class="dropdown-item" data-workplace="parts">部品組立</button>
                             <button class="dropdown-item" data-workplace="cab">キャブ組立</button>
+                            <button class="dropdown-item" data-workplace="supply">補給</button>
+                            <button class="dropdown-item" data-workplace="ac">組立全般</button>
+                            <button class="dropdown-item" data-workplace="ph">プレス/補給</button>
                         </div>
                     </div>
 
@@ -402,20 +448,21 @@
                 const dropdownUserName = document.getElementById('dropdownUserName');
                 const dropdownUserRank = document.getElementById('dropdownUserRank');
 
+                // 職場名の解決
+                const wpName = CONFIG.WORKPLACE_NAME_MAP[user.workplaceCode] || user.workplaceCode || '-';
+
                 // ロールを日本語に変換
-                const roleMap = {
-                    'admin': '管理者',
-                    'manufacturing_editor': '製造編集者',
-                    'quality_editor': '品質編集者',
-                    'viewer': '閲覧者'
-                };
-                const roleText = roleMap[user.role] || user.role;
+                const roleText = CONFIG.ROLE_NAME_MAP[user.role] || user.role;
 
                 if (dropdownUserName) {
                     dropdownUserName.textContent = user.name;
                 }
                 if (dropdownUserRank) {
                     dropdownUserRank.textContent = roleText;
+                }
+                const dropdownUserWorkplace = document.getElementById('dropdownUserWorkplace');
+                if (dropdownUserWorkplace) {
+                    dropdownUserWorkplace.textContent = wpName;
                 }
 
                 // モバイル版ドロップダウンのユーザー情報を設定
@@ -426,6 +473,10 @@
                 }
                 if (mobileDropdownUserRank) {
                     mobileDropdownUserRank.textContent = roleText;
+                }
+                const mobileDropdownUserWorkplace = document.getElementById('mobileDropdownUserWorkplace');
+                if (mobileDropdownUserWorkplace) {
+                    mobileDropdownUserWorkplace.textContent = wpName;
                 }
 
                 // Toggle Dropdown

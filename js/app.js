@@ -14,6 +14,9 @@ const DEFAULT_AUTO_UPDATE_MINUTES = 5;
 let autoUpdateMinutes = parseInt(localStorage.getItem('OSG_AUTO_UPDATE_MINUTES')) || DEFAULT_AUTO_UPDATE_MINUTES; // 初期値読み込み
 let autoUpdateInterval = autoUpdateMinutes * 60 * 1000; // ミリ秒変換
 let notificationAudio = null; // グローバルAudioオブジェクト（再利用用）
+let isSoundEnabled = localStorage.getItem('OSG_SOUND_ENABLED') !== 'false'; // 通知音設定（デフォルトON）
+let countdownTimer = null; // カウントダウン表示用タイマー
+let nextUpdateTime = 0; // 次回更新予定時刻
 
 // NEWバッジ表示用のIDセット（localStorageから復元 - ブラウザを閉じても永続化）
 const savedNewItemIds = localStorage.getItem('newItemIds');
@@ -52,7 +55,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const workplaceMapRev = {
             'P': 'press',
             'A': 'parts',
-            'C': 'cab'
+            'C': 'cab',
+            'H': 'supply',
+            'AC': 'ac', // 組立全般
+            'PH': 'ph'  // プレス/補給
         };
         const defaultFilter = workplaceMapRev[user.workplaceCode];
         if (defaultFilter) {
@@ -102,8 +108,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const otherSelect = document.getElementById(otherSelectId);
                 if (otherSelect) otherSelect.value = val;
 
-                // タイマー再起動
-                startAutoUpdate();
+                // タイマー再起動 (即時リセット)
+                startAutoUpdate(true);
             });
         }
     };
@@ -129,6 +135,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (mobileMenuBtn) {
         mobileMenuBtn.addEventListener('click', resetAutoUpdateInput);
     }
+
+    // --- Sound Toggle Logic ---
+    const setupSoundToggle = () => {
+        const pcRadios = document.querySelectorAll('input[name="sound"]');
+        const mobileRadios = document.querySelectorAll('input[name="mobileSound"]');
+
+        const updateRadios = (enabled) => {
+            const val = enabled ? 'on' : 'off';
+            pcRadios.forEach(r => { if (r.value === val) r.checked = true; });
+            mobileRadios.forEach(r => { if (r.value === val) r.checked = true; });
+        };
+
+        // 初期表示設定
+        updateRadios(isSoundEnabled);
+
+        const handleSoundChange = (e) => {
+            const enabled = e.target.value === 'on';
+            isSoundEnabled = enabled;
+            localStorage.setItem('OSG_SOUND_ENABLED', enabled);
+            console.log(`Notification sound set to: ${enabled ? 'ON' : 'OFF'}`);
+            // PC/Mobile同期
+            updateRadios(enabled);
+
+            // テスト再生（ONにした時のみ）
+            if (enabled) {
+                playNotificationSound();
+            }
+        };
+
+        pcRadios.forEach(r => r.addEventListener('change', handleSoundChange));
+        mobileRadios.forEach(r => r.addEventListener('change', handleSoundChange));
+    };
+    setupSoundToggle();
 
     try {
         // Fetch data from GAS API
@@ -187,25 +226,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // ブラウザの自動再生ポリシー対策：ユーザーの初回操作時に無音で再生してアンロックする
-    // ブラウザの自動再生ポリシー対策：ユーザーの初回操作時に無音で再生してアンロックする
+    // ブラウザの自動再生ポリシー対策：ユーザーの初回操作時に再生してアンロックする
     const unlockAudio = () => {
         const audio = getNotificationAudio();
 
-        // 音量は0だとブロックされる場合があるため、極小にする
-        audio.volume = 0.01;
+        // 確実に無音にする（ブラウザのアンロック実績のためだけで、聞かせる必要はない）
+        audio.volume = 0;
 
         // 再生状態をリセット
         audio.load();
 
-        // 再生して即停止することで、「ユーザー操作による再生」の実績を作る
+        // 再生する
         const playPromise = audio.play();
 
         if (playPromise !== undefined) {
             playPromise.then(() => {
-                console.log('Audio playback unlocked');
+                console.log('Audio playback unlocked (Silent)');
+                // 念のため一時停止
                 audio.pause();
-                audio.currentTime = 0; // 巻き戻し
-                audio.volume = 0.5; // 音量を戻す
+                audio.currentTime = 0;
+                // これで次回以降 playNotificationSound() が呼ばれた際に音が鳴るようになる
             }).catch(e => {
                 console.log('Audio unlock failed (likely waiting for interaction):', e);
             });
@@ -228,13 +268,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         sessionStorage.removeItem('osg_welcome_shown');
 
         // 職場名の解決
-        const workplaceNameMap = {
-            'P': 'プレス',
-            'A': '部品組立',
-            'C': 'キャブ組立',
-            'all': '全般'
-        };
-        const wpName = workplaceNameMap[user.workplaceCode] || user.workplaceCode || '-';
+        const wpName = CONFIG.WORKPLACE_NAME_MAP[user.workplaceCode] || user.workplaceCode || '-';
+
+        // ロール名の解決
+        const roleText = CONFIG.ROLE_NAME_MAP[user.role] || user.role;
 
         const modalHtml = `
             <div class="welcome-modal-overlay" id="welcomeModal">
@@ -244,17 +281,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <div class="welcome-info">
                         <div class="welcome-info-row">
-                            <span class="welcome-info-label">ユーザー名</span>
+                            <span class="welcome-info-label">ユーザー名：</span>
                             <span class="welcome-info-value">${user.name} 様</span>
                         </div>
                         <div class="welcome-info-row">
-                            <span class="welcome-info-label">ユーザークラス</span>
-                            <span class="welcome-info-value">${user.role}</span>
+                            <span class="welcome-info-label">ユーザークラス：</span>
+                            <span class="welcome-info-value">${roleText}</span>
                         </div>
                         <div class="welcome-info-row">
-                            <span class="welcome-info-label">担当職場</span>
+                            <span class="welcome-info-label">担当職場：</span>
                             <span class="welcome-info-value">${wpName}</span>
                         </div>
+                        <div class="welcome-divider"></div>
+                        <span class="welcome-warning-text">注意：通知音がなります。</span><br>
+                        通知音のON/OFFは設定メニューから変更できます。
                     </div>
                     <button class="welcome-ok-btn" id="welcomeOkBtn">
                         確認
@@ -289,15 +329,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 保留していた初期通知があれば実行
             if (window.pendingInitialNotifications && window.pendingInitialNotifications.length > 0) {
                 const items = window.pendingInitialNotifications;
-                const workplaceNameMap = {
-                    'P': 'プレス',
-                    'A': '部品組立',
-                    'C': 'キャブ組立'
-                };
-
                 const details = items.map(item => {
                     const code = item.distributionCode;
-                    const name = workplaceNameMap[code] || code || '-';
+                    const name = CONFIG.WORKPLACE_NAME_MAP[code] || code || '-';
                     // newWorkerプロパティが存在するか確認、なければ空文字
                     return `【${name}】No.${item.id}、${item.newWorker || ''}`;
                 }).join('\n');
@@ -539,9 +573,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         } finally {
             btn.classList.remove('refreshing');
 
-            // 手動更新完了: 自動更新タイマーをリセット（ここから再カウント開始）
-            startAutoUpdate();
-            console.log('Auto update timer restarted after manual refresh.');
+            // 手動更新完了: 自動更新タイマーをリセット（ここから再カウント開始 - 即時リセット）
+            startAutoUpdate(true);
+            console.log('Auto update timer reset after manual refresh.');
         }
     }
 
@@ -920,18 +954,24 @@ function getFilteredData() {
         });
     }
 
-    // 職場別フィルター - 完全一致
+    // 職場別フィルター - 完全一致 + 複合条件(AC, PH)
     if (currentWorkplace !== 'all') {
         const workplaceMap = {
             'press': 'P',
             'parts': 'A',
-            'cab': 'C'
+            'cab': 'C',
+            'supply': 'H',
+            'ac': ['A', 'C'], // ACは A or C
+            'ph': ['P', 'H']  // PHは P or H
         };
-        const code = workplaceMap[currentWorkplace];
-        if (code) {
-            filtered = filtered.filter(item =>
-                item.distributionCode === code
-            );
+        const target = workplaceMap[currentWorkplace];
+
+        if (Array.isArray(target)) {
+            // 複合条件 (AC, PH)
+            filtered = filtered.filter(item => target.includes(item.distributionCode));
+        } else if (target) {
+            // 単一条件
+            filtered = filtered.filter(item => item.distributionCode === target);
         }
     }
 
@@ -1297,7 +1337,7 @@ function formatDateTime(dateStr) {
 
 // --- Auto Update & Notification Logic ---
 
-function startAutoUpdate() {
+function startAutoUpdate(isManualReset = false) {
     // ウェルカムモーダル（通知音許可）が完了するまでは自動更新をスタートしない
     if (!sessionStorage.getItem('osg_welcome_shown')) {
         console.log('Auto-update paused: waiting for welcome modal confirmation.');
@@ -1306,26 +1346,111 @@ function startAutoUpdate() {
 
     if (autoUpdateTimer) clearTimeout(autoUpdateTimer);
 
-    // 設定値 + 0~60秒のランダムゆらぎ
-    const jitter = Math.floor(Math.random() * 60000);
-    const delay = autoUpdateInterval + jitter;
+    // 状態リセット
+    isTimerPaused = false;
+    pausedRemainingTime = 0;
+
+    // 設定値からカウントダウンを開始（ゆらぎを廃止）
+    const delay = autoUpdateInterval;
 
     autoUpdateTimer = setTimeout(async () => {
         await checkForUpdates();
         startAutoUpdate(); // 次のタイマーセット
     }, delay);
+
+    // カウントダウン開始
+    nextUpdateTime = Date.now() + delay;
+    startCountdown();
+
+    console.log(`Auto update timer set. Delay: ${Math.round(delay / 1000)}s${isManualReset ? ' (Manual Reset)' : ''}`);
+}
+
+/**
+ * Start Countdown Timer Logic
+ */
+function startCountdown() {
+    // 既存のタイマーをクリア
+    if (countdownTimer) clearInterval(countdownTimer);
+
+    const updateDisplay = () => {
+        const editModal = document.getElementById('editModal');
+        const passwordModal = document.getElementById('passwordModal');
+
+        const shouldPause =
+            (editModal && editModal.classList.contains('show')) ||
+            (passwordModal && passwordModal.classList.contains('show'));
+
+        if (shouldPause) {
+            if (!isTimerPaused) {
+                // 一時停止開始: 残り時間を記録し、Timeoutをクリア
+                isTimerPaused = true;
+                pausedRemainingTime = nextUpdateTime - Date.now();
+                if (autoUpdateTimer) clearTimeout(autoUpdateTimer);
+                console.log('Countdown paused. Remaining:', Math.round(pausedRemainingTime / 1000), 's');
+            }
+            // 表示は更新しない（現在の秒数で止める、または --:-- にする場合は以下）
+            return;
+        } else {
+            if (isTimerPaused) {
+                // 一時停止解除: 新しい終了時刻を設定し、Timeoutを再セット
+                isTimerPaused = false;
+                nextUpdateTime = Date.now() + pausedRemainingTime;
+
+                autoUpdateTimer = setTimeout(async () => {
+                    await checkForUpdates();
+                    startAutoUpdate();
+                }, pausedRemainingTime);
+
+                console.log('Countdown resumed. Next update in:', Math.round(pausedRemainingTime / 1000), 's');
+            }
+        }
+
+        const now = Date.now();
+        const diff = nextUpdateTime - now;
+
+        let text = '--:--';
+        if (diff > 0) {
+            const m = Math.floor(diff / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            text = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        } else {
+            text = '00:00'; // 更新直前
+        }
+
+        const pcEl = document.getElementById('autoUpdateCountdown');
+        const mobileEl = document.getElementById('mobileAutoUpdateCountdown');
+        if (pcEl) pcEl.textContent = text;
+        if (mobileEl) mobileEl.textContent = text;
+    };
+
+    updateDisplay(); // 初回即時実行
+    countdownTimer = setInterval(updateDisplay, 1000);
+}
+
+/**
+ * Stop Countdown Timer
+ */
+function stopCountdown() {
+    if (countdownTimer) clearInterval(countdownTimer);
+    const pcEl = document.getElementById('autoUpdateCountdown');
+    const mobileEl = document.getElementById('mobileAutoUpdateCountdown');
+    if (pcEl) pcEl.textContent = '--:--';
+    if (mobileEl) mobileEl.textContent = '--:--';
 }
 
 async function checkForUpdates() {
-    // 編集モード中（モーダル表示中）は更新をスキップ
+    // 編集モード中（モーダル表示中）またはカード展開中は更新をスキップ
     const editModal = document.getElementById('editModal');
     const passwordModal = document.getElementById('passwordModal');
+    const hasExpandedCard = document.querySelector('.shift-card.expanded') !== null;
+
     const isEditingMode =
         (editModal && editModal.classList.contains('show')) ||
-        (passwordModal && passwordModal.classList.contains('show'));
+        (passwordModal && passwordModal.classList.contains('show')) ||
+        hasExpandedCard;
 
     if (isEditingMode) {
-        console.log('Editing mode active, skipping auto-update.');
+        console.log('Editing mode or expanded card active, skipping auto-update.');
         return; // 更新をスキップ（次のタイマーはstartAutoUpdateで設定される）
     }
 
@@ -1351,9 +1476,20 @@ function handleNotifications(newItems) {
     const myWorkplace = user ? user.workplaceCode : '';
 
     // 1. ユーザーの職場コードでフィルタリング
+    // AC -> A or C, PH -> P or H, H -> H, etc.
     const targetItems = newItems.filter(item => {
         if (!myWorkplace) return false;
         if (myWorkplace === 'all') return true;
+
+        // 複合コード対応
+        if (myWorkplace === 'AC') {
+            return item.distributionCode === 'A' || item.distributionCode === 'C';
+        }
+        if (myWorkplace === 'PH') {
+            return item.distributionCode === 'P' || item.distributionCode === 'H';
+        }
+
+        // 通常コード (P, A, C, H)
         return item.distributionCode === myWorkplace;
     });
 
@@ -1369,7 +1505,8 @@ function handleNotifications(newItems) {
     const workplaceNameMap = {
         'P': 'プレス',
         'A': '部品組立',
-        'C': 'キャブ組立'
+        'C': 'キャブ組立',
+        'H': '補給'
     };
 
     const formatItem = (item) => {
@@ -1549,6 +1686,11 @@ function showError(message) {
  * NEWバッジが付く更新時に音を鳴らす
  */
 function playNotificationSound() {
+    if (!isSoundEnabled) {
+        console.log('Notification sound skipped (Disabled by user).');
+        return;
+    }
+
     try {
         // グローバルオブジェクトを使用（または新規作成）
         // unlockAudioですでに作られていれば、それが使われる（アンロック済み）
@@ -1611,6 +1753,15 @@ function checkInitialNotifications(allData) {
         const myWorkplace = user.workplaceCode;
         const relevantItems = newItems.filter(item => {
             if (!myWorkplace || myWorkplace === 'all') return true;
+
+            // 複合コード対応
+            if (myWorkplace === 'AC') {
+                return item.distributionCode === 'A' || item.distributionCode === 'C';
+            }
+            if (myWorkplace === 'PH') {
+                return item.distributionCode === 'P' || item.distributionCode === 'H';
+            }
+
             return item.distributionCode === myWorkplace;
         });
 
